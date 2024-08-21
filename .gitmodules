@@ -1,3 +1,3 @@
-[submodule "og"]
-	path = og
-	url = git@github.com:camall3n/focused-macros.git
+[submodule "cam"]
+	path = cam
+	url = git@github.com:xyntechx/focused-macros-og.git
