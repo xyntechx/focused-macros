@@ -30,5 +30,15 @@ source .venv/bin/activate
 
 ### Update submodules
 ```
-git submodule update
+git submodule update --recursive
+```
+
+### Learn focused macros with BFS
+```
+python3 macro_learning.py
+```
+
+### Run planning BFS
+```
+python3 planning.py
 ```
