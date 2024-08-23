@@ -49,14 +49,15 @@ def bfs(init_seq, N_m=576, R_m=1, B_m=1_000_000, disable_progress=False):
                 visited_states.append(state)
 
                 seq = curr_seq + [a]
+                macro = seq[len(seq_0):] # exclude initial sequence in macro
                 h = simulator.diff(baseline=simulator_0.cube)
-                g = len(seq) - len(seq_0)
+                g = len(macro)
                 f = h + g
 
                 if done:
                     if macros_max_pq.full():
                         macros_max_pq.get()
-                    macros_max_pq.put((h, seq))
+                    macros_max_pq.put((h, macro))
                     return macros_max_pq
 
                 fringe.put((f, seq))
@@ -64,11 +65,11 @@ def bfs(init_seq, N_m=576, R_m=1, B_m=1_000_000, disable_progress=False):
                 if macros_max_pq.full():
                     worst_macro = macros_max_pq.get()
                     if h < worst_macro[0]:
-                        macros_max_pq.put((h, seq))
+                        macros_max_pq.put((h, macro))
                     else:
                         macros_max_pq.put(worst_macro)
                 else:
-                    macros_max_pq.put((h, seq))
+                    macros_max_pq.put((h, macro))
 
     return macros_max_pq
 
@@ -83,13 +84,28 @@ if __name__ == "__main__":
         init_actions = get_init_actions()
 
     init_seq = [CubeEnv().action_lookup[a] for a in init_actions]
-    macros_max_pq = bfs(init_seq)
-    # macros_max_pq = bfs(init_seq, B_m=100)
+
+    # macros_max_pq = bfs(init_seq)
+    macros_max_pq = bfs(init_seq, B_m=500_000)
+
     macros_set = set()
+    h_vals = []
+
     while not macros_max_pq.empty():
-        seq = macros_max_pq.get()[1]
-        seq_str = " ".join([CubeEnv().action_meanings[s] for s in seq])
-        macros_set.add(seq_str)
+        item = macros_max_pq.get()
+
+        h = item[0]
+        h_vals.append(h)
+
+        macro = item[1]
+        macro_str = " ".join([CubeEnv().action_meanings[s] for s in macro])
+        macros_set.add(macro_str)
+
+    print(f"{len(macros_set)} macros generated")
+    print(f"Max (worst) h value: {max(h_vals)}")
+    print(f"Min (best) h value: {min(h_vals)}")
+    print(f"Largest macro size: {len(max(macros_set, key=lambda x: len(x.split(" "))).split(" "))}")
+    print(f"Smallest macro size: {len(min(macros_set, key=lambda x: len(x.split(" "))).split(" "))}")
 
     with open("output/learned_macros.pkl", "wb") as f:
         pickle.dump(list(macros_set), f)
