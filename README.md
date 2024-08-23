@@ -42,3 +42,19 @@ python3 macro_learning.py
 ```
 python3 planning.py
 ```
+
+## Details
+
+### Macro Learning
+Saved in `/output/learned_macros.pkl`
+
+```
+576 macros generated
+Max (worst) h value: 16
+Min (best) h value: 6
+Largest macro size: 12
+Smallest macro size: 6
+```
+
+### Planning
+Saved in `/output/cube_solution.pkl`
