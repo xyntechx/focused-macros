@@ -1,4 +1,5 @@
 import pickle
+from tqdm import tqdm
 from queue import PriorityQueue
 from max_pq import MaxPQ
 from cam.domains.cube.cubeenv import CubeEnv
@@ -15,7 +16,7 @@ def get_init_actions(index=0):
     return init_actions
 
 
-def bfs(init_seq, N_m=576, R_m=1, B_m=1_000_000):
+def bfs(init_seq, N_m=576, R_m=1, B_m=1_000_000, disable_progress=False):
     # Initialize baseline simulator
     simulator_0 = CubeEnv()
     simulator_0.reset(sequence=init_seq)
@@ -30,44 +31,44 @@ def bfs(init_seq, N_m=576, R_m=1, B_m=1_000_000):
     macros_max_pq = MaxPQ(maxsize=N_m/R_m) # priority h (effect size)
 
     t_count = 0
-    while t_count < B_m:
-        print(t_count)
-        # Initialize active simulator
-        curr_seq = fringe.get(block=False)[1]
-        simulator = CubeEnv()
-        simulator.reset(sequence=curr_seq)
+    with tqdm(total=B_m, disable=disable_progress) as progress:
+        while t_count < B_m:
+            # Initialize active simulator
+            curr_seq = fringe.get(block=False)[1]
+            simulator = CubeEnv()
 
-        for a in simulator.action_meanings.keys():
-            state, _, done = simulator.step(a)
+            for a in simulator.action_meanings.keys():
+                t_count += 1
+                progress.update()
+                simulator.reset(sequence=curr_seq)
 
-            if state in visited_states:
-                continue
-            visited_states.append(state)
+                state, _, done = simulator.step(a)
 
-            seq = curr_seq + [a]
-            h = simulator.diff(baseline=simulator_0.cube)
-            g = len(seq) - len(seq_0)
-            f = h + g
+                if state in visited_states:
+                    continue
+                visited_states.append(state)
 
-            if done:
-                if macros_max_pq.full():
-                    macros_max_pq.get()
-                macros_max_pq.put((h, seq))
-                return macros_max_pq
+                seq = curr_seq + [a]
+                h = simulator.diff(baseline=simulator_0.cube)
+                g = len(seq) - len(seq_0)
+                f = h + g
 
-            fringe.put((f, seq))
-
-            if macros_max_pq.full():
-                worst_macro = macros_max_pq.get()
-                if h < worst_macro[0]:
+                if done:
+                    if macros_max_pq.full():
+                        macros_max_pq.get()
                     macros_max_pq.put((h, seq))
-                else:
-                    macros_max_pq.put(worst_macro)
-            else:
-                macros_max_pq.put((h, seq))
+                    return macros_max_pq
 
-            simulator.reset(sequence=curr_seq)
-            t_count += 1
+                fringe.put((f, seq))
+
+                if macros_max_pq.full():
+                    worst_macro = macros_max_pq.get()
+                    if h < worst_macro[0]:
+                        macros_max_pq.put((h, seq))
+                    else:
+                        macros_max_pq.put(worst_macro)
+                else:
+                    macros_max_pq.put((h, seq))
 
     return macros_max_pq
 
@@ -82,8 +83,8 @@ if __name__ == "__main__":
         init_actions = get_init_actions()
 
     init_seq = [CubeEnv().action_lookup[a] for a in init_actions]
-    # macros_max_pq = bfs(init_seq)
-    macros_max_pq = bfs(init_seq, B_m=100)
+    macros_max_pq = bfs(init_seq)
+    # macros_max_pq = bfs(init_seq, B_m=100)
     macros_set = set()
     while not macros_max_pq.empty():
         seq = macros_max_pq.get()[1]
