@@ -3,9 +3,6 @@ from tqdm import tqdm
 from queue import PriorityQueue
 from cam.domains.cube.cubeenv import CubeEnv
 
-# Best first search for planning, guided by goal-count heuristic
-# Action space includes both base/primitive actions and focused macros learned via macro_learning.py
-
 
 def get_init_actions(index=0):
     """
