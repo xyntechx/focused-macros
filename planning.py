@@ -90,6 +90,7 @@ if __name__ == "__main__":
     with open("output/learned_macros.pkl", "rb") as f:
         learned_macros = pickle.load(f)
         print(f"{len(learned_macros)} macros found")
+        print(learned_macros)
 
     print("Planning...")
 
