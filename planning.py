@@ -16,10 +16,16 @@ def get_init_actions(index=0):
     return init_actions
 
 
+def join_int_list(lst):
+    lst_str = [str(i) for i in lst]
+    return "".join(lst_str)
+
+
 def bfs(init_seq, learned_macros, N_m=576, B_m=1_000_000, disable_progress=False):
     simulator = CubeEnv()
     simulator.reset(sequence=init_seq)
     curr_seq = simulator.sequence
+    visited_states = []
 
     with tqdm(total=B_m, disable=disable_progress) as progress:
         for _ in range(B_m // (simulator.n_actions + N_m)):
@@ -27,31 +33,55 @@ def bfs(init_seq, learned_macros, N_m=576, B_m=1_000_000, disable_progress=False
 
             # Primitive actions
             for a in simulator.action_meanings.keys():
-                simulator.step(a)
+                state, _, _ = simulator.step(a)
+                state_str = join_int_list(state)
+
+                # Check if state has been visited
+                if state_str in visited_states:
+                    simulator.step((a + 6) % 12) # undo action
+                    progress.update()
+                    continue
+                visited_states.append(state_str)
+
                 if simulator.diff() == 0: # solved
                     simulator.render()
                     return curr_seq + [a]
+
                 possible_gcount_actions.append((simulator.diff(), [a]))
-                simulator.reset(sequence=simulator.sequence)
+                simulator.step((a + 6) % 12) # undo action
                 progress.update()
 
-            # Macros
+            # Learned macros
             for macro in learned_macros:
+                # Perform all actions in the macro
                 primitives = [simulator.action_lookup[a] for a in macro.split(" ")]
                 for a in primitives:
-                    simulator.step(a)
+                    state, _, _ = simulator.step(a)
+
+                # Check if state has been visited
+                state_str = join_int_list(simulator.state)
+                if state_str in visited_states:
+                    for a in reversed(primitives):
+                        simulator.step((a + 6) % 12) # undo action
+                    progress.update()
+                    continue
+                visited_states.append(state_str)
+
                 if simulator.diff() == 0: # solved
                     simulator.render()
                     return curr_seq + [a]
+
                 possible_gcount_actions.append((simulator.diff(), primitives))
-                simulator.reset(sequence=simulator.sequence)
+                for a in reversed(primitives):
+                    simulator.step((a + 6) % 12) # undo action
                 progress.update()
 
             best_macro = min(possible_gcount_actions, key=lambda x: x[0])
-            best_action = best_macro[1]
+            best_seq = best_macro[1]
             print(f"Goal count: {best_macro[0]}")
-            curr_seq = simulator.sequence + best_action
-            simulator.reset(sequence=curr_seq)
+            curr_seq += best_seq
+            for a in best_seq:
+                simulator.step(a)
 
     simulator.render()
     return curr_seq
@@ -71,9 +101,9 @@ if __name__ == "__main__":
         init_actions = get_init_actions()
 
     init_seq = [CubeEnv().action_lookup[a] for a in init_actions]
-    plan = bfs(init_seq, learned_macros, B_m=50_000)
+    plan = bfs(init_seq, learned_macros)
 
     print(plan)
 
-    with open("output/cube_solution.pkl", "wb") as f:
+    with open(f"output/cube_solution_start{str(index).zfill(3)}.pkl", "wb") as f:
         pickle.dump(plan, f)
