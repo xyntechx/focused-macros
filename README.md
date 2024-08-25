@@ -1,4 +1,4 @@
-# Focused Macros Greedy Best-First: Planning
+# Focused Macros
 Greedy best-first search to learn focused macros and perform planning to solve the Rubik's Cube
 
 ## Init Setup
@@ -33,17 +33,17 @@ source .venv/bin/activate
 git submodule update --recursive
 ```
 
-### Learn focused macros with BFS
+### Learn focused macros
 ```
 python3 macro_learning.py
 ```
 
-### Run planning BFS
+### Run planning
 ```
 python3 planning.py
 ```
 
-## Details
+## Results
 
 ### Macro Learning
 Saved in `/output/learned_macros.pkl`
@@ -58,11 +58,12 @@ Longest Macro Length (g): 12
 ```
 
 ### Planning
-Saved in `/output/cube_solution_start<index>.pkl`.
+Saved in `/output/cube_solution_start<index>.pkl`
 
 | Cube Start Index   | Greedy BFS Planning Time |
 | :----------------: | :----------------------: |
 | 0                  | 01:06                    |
 | 1                  | 06:10                    |
+| 14                 | 06:42                    |
 | 50                 | 29:04                    |
 | 99                 | 28:58                    |
