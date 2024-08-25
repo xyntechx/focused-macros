@@ -1,7 +1,6 @@
 import pickle
+import math
 from tqdm import tqdm
-from queue import PriorityQueue
-from max_pq import MaxPQ
 from cam.domains.cube.cubeenv import CubeEnv
 
 
@@ -17,62 +16,77 @@ def get_init_actions(index=0):
     return init_actions
 
 
-def bfs(init_seq, N_m=576, R_m=1, B_m=1_000_000, disable_progress=False):
-    # Initialize baseline simulator
-    simulator_0 = CubeEnv()
-    simulator_0.reset(sequence=init_seq)
-    seq_0 = simulator_0.sequence
+def net_actions(sequence, base_actions):
+    return sequence[len(base_actions):]
 
-    # Initialize fringe with initial state s0
-    fringe = PriorityQueue() # priority f (effect size + macro length)
-    fringe.put((0, seq_0))
 
-    visited_states = []
+def join_int_list(lst):
+    lst_str = [str(i) for i in lst]
+    return "".join(lst_str)
 
-    macros_max_pq = MaxPQ(maxsize=N_m/R_m) # priority h (effect size)
 
-    t_count = 0
-    with tqdm(total=B_m, disable=disable_progress) as progress:
-        while t_count < B_m:
-            # Initialize active simulator
-            curr_seq = fringe.get(block=False)[1]
-            simulator = CubeEnv()
+def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable_progress=False):
+    # Specs of base_simulator (describing root node of search tree)
+    base_state = join_int_list(base_simulator.state)
+    base_actions = base_simulator.sequence
+    base_data = {base_state: {
+        "f": math.inf, # f-heuristic = net effect (h) + macro length (g)
+        "net_actions": net_actions(base_actions, base_actions) # actions taken from base_state
+    }}
 
-            for a in simulator.action_meanings.keys():
-                t_count += 1
-                progress.update()
-                simulator.reset(sequence=curr_seq)
+    # Initialize relevant vars for BFS
+    best_state = base_state # state with lowest f-heuristic (init as base_state)
+    fringe = base_data # data dict of all states ready to be expanded (init as base_data)
+    visited = {} # data dict of all states already visited (init as empty dict)
+    curr_simulator = CubeEnv() # simulator to be updated during search
 
-                state, _, done = simulator.step(a)
+    with tqdm(total=B_m//R_m, disable=disable_progress) as progress:
+        counter = 0
 
-                if state in visited_states:
-                    continue
-                visited_states.append(state)
+        while counter < B_m//R_m:
+            curr_simulator.reset(sequence=base_actions + fringe[best_state]["net_actions"])
 
-                seq = curr_seq + [a]
-                macro = seq[len(seq_0):] # exclude initial sequence in macro
-                h = simulator.diff(baseline=simulator_0.cube)
-                g = len(macro)
-                f = h + g
+            if len(visited) > N_m//R_m:
+                # Evaluate worst state based on net effect (h) heuristic
+                worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
+                visited.pop(worst_state)
 
-                if done:
-                    if macros_max_pq.full():
-                        macros_max_pq.get()
-                    macros_max_pq.put((h, macro))
-                    return macros_max_pq
+            if best_state in visited.keys():
+                # Compare based on net effect (h) heuristic
+                if fringe[best_state]["f"] - len(fringe[best_state]["net_actions"]) < visited[best_state]["f"] - len(visited[best_state]["net_actions"]):
+                    visited[best_state] = fringe[best_state]
+                fringe.pop(best_state)
+                best_state = min(fringe.keys(), key=lambda x: fringe[x]["f"])
+                continue # if I've visited this state before, there's no point in expanding it again
+            else:
+                visited[best_state] = fringe[best_state]
 
-                fringe.put((f, seq))
+            for action in base_simulator.action_meanings.keys():
+                state, _, _ = curr_simulator.step(action)
+                curr_state = join_int_list(state)
+                curr_actions = net_actions(curr_simulator.sequence + [action], base_actions)
+                curr_f = curr_simulator.diff(baseline=base_simulator.cube) + len(curr_actions)
 
-                if macros_max_pq.full():
-                    worst_macro = macros_max_pq.get()
-                    if h < worst_macro[0]:
-                        macros_max_pq.put((h, macro))
-                    else:
-                        macros_max_pq.put(worst_macro)
+                if curr_state in fringe.keys():
+                    if curr_f < fringe[curr_state]["f"]:
+                        fringe[curr_state] = {
+                            "f": curr_f,
+                            "net_actions": curr_actions
+                        }
                 else:
-                    macros_max_pq.put((h, macro))
+                    fringe[curr_state] = {
+                        "f": curr_f,
+                        "net_actions": curr_actions
+                    }
 
-    return macros_max_pq
+                curr_simulator.reset(sequence=curr_simulator.sequence)
+                counter += 1
+                progress.update()
+
+            fringe.pop(best_state)
+            best_state = min(fringe.keys(), key=lambda x: fringe[x]["f"])
+
+    return [visited[state]["net_actions"] for state in visited]
 
 
 if __name__ == "__main__":
@@ -84,29 +98,15 @@ if __name__ == "__main__":
     except ValueError:
         init_actions = get_init_actions()
 
-    init_seq = [CubeEnv().action_lookup[a] for a in init_actions]
+    base_simulator = CubeEnv()
+    init_seq = [base_simulator.action_lookup[a] for a in init_actions]
+    base_simulator.reset(sequence=init_seq)
 
-    # macros_max_pq = bfs(init_seq)
-    macros_max_pq = bfs(init_seq, B_m=500_000)
-
-    macros_set = set()
-    h_vals = []
-
-    while not macros_max_pq.empty():
-        item = macros_max_pq.get()
-
-        h = item[0]
-        h_vals.append(h)
-
-        macro = item[1]
-        macro_str = " ".join([CubeEnv().action_meanings[s] for s in macro])
-        macros_set.add(macro_str)
-
-    print(f"{len(macros_set)} macros generated")
-    print(f"Max (worst) h value: {max(h_vals)}")
-    print(f"Min (best) h value: {min(h_vals)}")
-    print(f"Largest macro size: {len(max(macros_set, key=lambda x: len(x.split(" "))).split(" "))}")
-    print(f"Smallest macro size: {len(min(macros_set, key=lambda x: len(x.split(" "))).split(" "))}")
+    macros = []
+    sequences = learn_macros(base_simulator, B_m=2_000)
+    for seq in sequences:
+        macro = " ".join([base_simulator.action_meanings[s] for s in seq])
+        macros.append(macro)
 
     with open("output/learned_macros.pkl", "wb") as f:
-        pickle.dump(list(macros_set), f)
+        pickle.dump(macros, f)
