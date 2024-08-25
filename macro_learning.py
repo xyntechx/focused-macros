@@ -25,6 +25,14 @@ def join_int_list(lst):
     return "".join(lst_str)
 
 
+def optimized_reset(curr_simulator, curr_sequence, base_actions):
+    if len(base_actions) < len(curr_sequence):
+        curr_simulator.reset(sequence=base_actions)
+    else:
+        for action in reversed(curr_sequence):
+            curr_simulator.step((action + 6) % 12) # undo action
+
+
 def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable_progress=False):
     # Specs of base_simulator (describing root node of search tree)
     base_state = join_int_list(base_simulator.state)
@@ -38,13 +46,18 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
     best_state = base_state # state with lowest f-heuristic (init as base_state)
     fringe = base_data # data dict of all states ready to be expanded (init as base_data)
     visited = {} # data dict of all states already visited (init as empty dict)
-    curr_simulator = CubeEnv() # simulator to be updated during search
+
+    # Setting up simulator to be updated during search
+    curr_simulator = CubeEnv()
+    curr_simulator.reset(sequence=base_actions)
 
     with tqdm(total=B_m//R_m, disable=disable_progress) as progress:
         counter = 0
 
         while counter < B_m//R_m:
-            curr_simulator.reset(sequence=base_actions + fringe[best_state]["net_actions"])
+            curr_sequence = fringe[best_state]["net_actions"][:]
+            for action in curr_sequence:
+                curr_simulator.step(action)
 
             if len(visited) > N_m//R_m:
                 # Evaluate worst state based on net effect (h) heuristic
@@ -53,10 +66,16 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
 
             if best_state in visited.keys():
                 # Compare based on net effect (h) heuristic
-                if fringe[best_state]["f"] - len(fringe[best_state]["net_actions"]) < visited[best_state]["f"] - len(visited[best_state]["net_actions"]):
+                fringe_h = fringe[best_state]["f"] - len(curr_sequence)
+                visited_h = visited[best_state]["f"] - len(visited[best_state]["net_actions"])
+
+                if fringe_h < visited_h:
                     visited[best_state] = fringe[best_state]
+
                 fringe.pop(best_state)
                 best_state = min(fringe.keys(), key=lambda x: fringe[x]["f"])
+                optimized_reset(curr_simulator, curr_sequence, base_actions)
+
                 continue # if I've visited this state before, there's no point in expanding it again
             else:
                 visited[best_state] = fringe[best_state]
@@ -64,7 +83,7 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
             for action in base_simulator.action_meanings.keys():
                 state, _, _ = curr_simulator.step(action)
                 curr_state = join_int_list(state)
-                curr_actions = net_actions(curr_simulator.sequence + [action], base_actions)
+                curr_actions = net_actions(base_actions + curr_sequence + [action], base_actions)
                 curr_f = curr_simulator.diff(baseline=base_simulator.cube) + len(curr_actions)
 
                 if curr_state in fringe.keys():
@@ -79,12 +98,20 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
                         "net_actions": curr_actions
                     }
 
-                curr_simulator.reset(sequence=curr_simulator.sequence)
+                curr_simulator.step((action + 6) % 12) # undo action
                 counter += 1
                 progress.update()
 
+            optimized_reset(curr_simulator, curr_sequence, base_actions)
+
             fringe.pop(best_state)
             best_state = min(fringe.keys(), key=lambda x: fringe[x]["f"])
+
+    # Stats
+    best_state = min(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
+    worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
+    print(f"Best Net Effect (h) Heuristic: {visited[best_state]["f"] - len(visited[best_state]["net_actions"])}")
+    print(f"Worst Net Effect (h) Heuristic: {visited[worst_state]["f"] - len(visited[worst_state]["net_actions"])}")
 
     return [visited[state]["net_actions"] for state in visited]
 
@@ -103,7 +130,7 @@ if __name__ == "__main__":
     base_simulator.reset(sequence=init_seq)
 
     macros = []
-    sequences = learn_macros(base_simulator, B_m=2_000)
+    sequences = learn_macros(base_simulator, B_m=100_000)
     for seq in sequences:
         macro = " ".join([base_simulator.action_meanings[s] for s in seq])
         macros.append(macro)
