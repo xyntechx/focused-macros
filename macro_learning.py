@@ -59,11 +59,6 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
             for action in curr_sequence:
                 curr_simulator.step(action)
 
-            if len(visited) > N_m//R_m:
-                # Evaluate worst state based on net effect (h) heuristic
-                worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
-                visited.pop(worst_state)
-
             if best_state in visited.keys():
                 # Compare based on net effect (h) heuristic
                 fringe_h = fringe[best_state]["f"] - len(curr_sequence)
@@ -79,6 +74,11 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
                 continue # if I've visited this state before, there's no point in expanding it again
             else:
                 visited[best_state] = fringe[best_state]
+
+            if len(visited) > N_m//R_m:
+                # Evaluate worst state based on net effect (h) heuristic
+                worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
+                visited.pop(worst_state)
 
             for action in base_simulator.action_meanings.keys():
                 state, _, _ = curr_simulator.step(action)
@@ -110,6 +110,7 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
     # Stats
     best_state = min(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
     worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
+    print(f"# of Macros Generated: {len(visited)}")
     print(f"Best Net Effect (h) Heuristic: {visited[best_state]["f"] - len(visited[best_state]["net_actions"])}")
     print(f"Worst Net Effect (h) Heuristic: {visited[worst_state]["f"] - len(visited[worst_state]["net_actions"])}")
 
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     base_simulator.reset(sequence=init_seq)
 
     macros = []
-    sequences = learn_macros(base_simulator, B_m=100_000)
+    sequences = learn_macros(base_simulator)
     for seq in sequences:
         macro = " ".join([base_simulator.action_meanings[s] for s in seq])
         macros.append(macro)
