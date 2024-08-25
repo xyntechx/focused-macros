@@ -5,8 +5,8 @@ Greedy best-first search to learn focused macros and perform planning to solve t
 
 ### Clone repo
 ```
-git clone --recursive git@github.com:xyntechx/focused-macros-planning.git
-cd focused-macros-planning
+git clone --recursive git@github.com:xyntechx/focused-macros.git
+cd focused-macros
 ```
 
 ### Create & activate virtual environment
