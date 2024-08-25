@@ -16,10 +16,6 @@ def get_init_actions(index=0):
     return init_actions
 
 
-def net_actions(sequence, base_actions):
-    return sequence[len(base_actions):]
-
-
 def join_int_list(lst):
     lst_str = [str(i) for i in lst]
     return "".join(lst_str)
@@ -39,7 +35,7 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
     base_actions = base_simulator.sequence
     base_data = {base_state: {
         "f": math.inf, # f-heuristic = net effect (h) + macro length (g)
-        "net_actions": net_actions(base_actions, base_actions) # actions taken from base_state
+        "net_actions": [] # actions taken from base_state
     }}
 
     # Initialize relevant vars for BFS
@@ -75,15 +71,10 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
             else:
                 visited[best_state] = fringe[best_state]
 
-            if len(visited) > N_m//R_m:
-                # Evaluate worst state based on net effect (h) heuristic
-                worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
-                visited.pop(worst_state)
-
             for action in base_simulator.action_meanings.keys():
                 state, _, _ = curr_simulator.step(action)
                 curr_state = join_int_list(state)
-                curr_actions = net_actions(base_actions + curr_sequence + [action], base_actions)
+                curr_actions = curr_sequence + [action]
                 curr_f = curr_simulator.diff(baseline=base_simulator.cube) + len(curr_actions)
 
                 if curr_state in fringe.keys():
@@ -107,14 +98,21 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
             fringe.pop(best_state)
             best_state = min(fringe.keys(), key=lambda x: fringe[x]["f"])
 
-    # Stats
-    best_state = min(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
-    worst_state = max(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
-    print(f"# of Macros Generated: {len(visited)}")
-    print(f"Best Net Effect (h) Heuristic: {visited[best_state]["f"] - len(visited[best_state]["net_actions"])}")
-    print(f"Worst Net Effect (h) Heuristic: {visited[worst_state]["f"] - len(visited[worst_state]["net_actions"])}")
+    macros = {}
+    for _ in range(N_m//R_m):
+        best_state = min(visited.keys(), key=lambda x: visited[x]["f"] - len(visited[x]["net_actions"]))
+        macros[best_state] = visited.pop(best_state)
 
-    return [visited[state]["net_actions"] for state in visited]
+    # Stats
+    best_state = min(macros.keys(), key=lambda x: macros[x]["f"] - len(macros[x]["net_actions"]))
+    worst_state = max(macros.keys(), key=lambda x: macros[x]["f"] - len(macros[x]["net_actions"]))
+    print(f"# of Macros Generated: {len(macros)}")
+    print(f"Best Net Effect (h) Heuristic: {macros[best_state]["f"] - len(macros[best_state]["net_actions"])}")
+    print(f"Worst Net Effect (h) Heuristic: {macros[worst_state]["f"] - len(macros[worst_state]["net_actions"])}")
+    print(f"Shortest Macro Length (g): {len(macros[min(macros, key=lambda x: len(macros[x]["net_actions"]))]["net_actions"])}")
+    print(f"Longest Macro Length (g): {len(macros[max(macros, key=lambda x: len(macros[x]["net_actions"]))]["net_actions"])}")
+
+    return [macros[state]["net_actions"] for state in macros]
 
 
 if __name__ == "__main__":
