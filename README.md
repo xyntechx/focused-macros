@@ -49,12 +49,13 @@ python3 planning.py
 Saved in `/output/learned_macros.pkl`
 
 ```
-Learning Time: 2:54:10
+Max Fringe Size: N_m * 10
+Learning Time: 15:03
 # of Macros Generated: 576
 Best Net Effect (h) Heuristic: 6
-Worst Net Effect (h) Heuristic: 15
+Worst Net Effect (h) Heuristic: 16
 Shortest Macro Length (g): 6
-Longest Macro Length (g): 12
+Longest Macro Length (g): 16
 ```
 
 ### Planning
@@ -62,8 +63,9 @@ Saved in `/output/cube_solution_start<index>.pkl`
 
 | Cube Start Index   | Greedy BFS Planning Time |
 | :----------------: | :----------------------: |
-| 0                  | 01:06                    |
-| 1                  | 06:10                    |
-| 14                 | 06:42                    |
-| 50                 | 29:04                    |
-| 99                 | 28:58                    |
+| 0                  | 00:36                    |
+| 1                  | 04:00                    |
+| 14                 | 01:15                    |
+| 20                 | 10:14                    |
+| 50                 | 07:51                    |
+| 99                 | 02:04                    |
