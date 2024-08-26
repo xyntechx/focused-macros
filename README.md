@@ -43,6 +43,11 @@ python3 macro_learning.py
 python3 planning.py
 ```
 
+### Solve cube with a saved plan
+```
+python3 solve.py
+```
+
 ## Results
 
 ### Macro Learning
