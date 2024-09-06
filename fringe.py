@@ -14,10 +14,14 @@ class Fringe():
             for id in self.frontiers[heuristic]:
                 return *self.frontiers[heuristic].pop(id), heuristic
 
-        for i in sorted(self.heuristics):
-            if self.frontiers[i]:
-                for id in self.frontiers[i]:
-                    return *self.frontiers[i].pop(id), i
+        heuristics = self.heuristics[:]
+        min_heuristic = min(heuristics)
+        while heuristics:
+            if self.frontiers[min_heuristic]:
+                for id in self.frontiers[min_heuristic]:
+                    return *self.frontiers[min_heuristic].pop(id), min_heuristic
+            heuristics.remove(min_heuristic)
+            min_heuristic = min(heuristics)
 
         return None
 
