@@ -55,7 +55,7 @@ Saved in `/output/learned_macros.pkl`
 
 ```
 Max Fringe Size: N_m * 10
-Learning Time: 15:03
+Learning Time: 06:38
 # of Macros Generated: 576
 Best Net Effect (h) Heuristic: 6
 Worst Net Effect (h) Heuristic: 16
