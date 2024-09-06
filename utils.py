@@ -1,3 +1,6 @@
+INFINITY = 999999 # basically infinity
+
+
 def get_init_actions(index=0):
     """
     Get initial actions from cam/domains/cube/random_starts with index=index (e.g. index=0 => start-000.txt) to set the initial state of the cube
