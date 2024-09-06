@@ -21,7 +21,7 @@ def learn_macros(base_simulator: CubeEnv, N_m=576, R_m=1, B_m=1_000_000, disable
     base_net_actions = []
 
     # Initialize relevant vars for BFS
-    fringe = Fringe()
+    fringe = Fringe(max_size=N_m*10)
     fringe.push((base_state, base_net_actions), base_state, INFINITY)
     visited = {} # data dict of all states already visited (init as empty dict)
 
