@@ -80,10 +80,8 @@ if __name__ == "__main__":
     print("Learn focused macros using best-first search")
 
     index = input("Enter start sequence index [0-99] (if left empty, default=0): ")
-    try:
-        init_actions = get_init_actions(int(index))
-    except ValueError:
-        init_actions = get_init_actions()
+    index = str(index if index else '0').zfill(3)
+    init_actions = get_init_actions(index)
 
     base_simulator = CubeEnv()
     init_seq = [base_simulator.action_lookup[a] for a in init_actions]
