@@ -70,4 +70,4 @@ Data from planning is saved in `output/data`. Each `.pkl` file is a pandas df st
 
 Graphs of effect size against timestep and macro length against timestep are saved in `output/plots`.
 
-For each of these folders, its subfolders correspond to the max fringe size used for macro learning (e.g. `n10` means the focused macros used were learned using greedy BFS with a fringe of max size `N_m * 10`)
+For each of these folders, its subfolders correspond to the max fringe size used for macro learning (e.g. `n10` means the focused macros used were learned through greedy BFS with a fringe of max size `N_m * 10`).
