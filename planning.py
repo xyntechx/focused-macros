@@ -51,8 +51,6 @@ def generate_plan(simulator: CubeEnv, init_seq, learned_macros, learned_macros_t
                     simulator.render()
                     print("Cube solved!")
 
-                    # plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
-                    # plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
                     save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths)
 
                     return [*curr_seq, a][len(init_seq):]
@@ -81,8 +79,6 @@ def generate_plan(simulator: CubeEnv, init_seq, learned_macros, learned_macros_t
                     simulator.render()
                     print("Cube solved!")
 
-                    # plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
-                    # plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
                     save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths)
 
                     return [*curr_seq, *primitives][len(init_seq):]
@@ -106,8 +102,6 @@ def generate_plan(simulator: CubeEnv, init_seq, learned_macros, learned_macros_t
     simulator.render()
     print(f"Unable to solve cube in {B_m} iterations")
 
-    # plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
-    # plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
     save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths)
 
     return curr_seq[len(init_seq):]
