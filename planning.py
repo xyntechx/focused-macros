@@ -1,20 +1,25 @@
 import pickle
 from tqdm import tqdm
 from copy import deepcopy
-import matplotlib.pyplot as plt
+from sys import exit
+import pandas as pd
+
 from cam.domains.cube.cubeenv import CubeEnv
 from utils import get_init_actions, join_int_list
 
 
-def plot_results(x, y, cube_index, title="Figure"):
-    fig, ax = plt.subplots()
-    ax.scatter(x, y, linewidth=2.0)
-    fig.suptitle(title)
+def save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths):
+    d = {
+        "step": range(len(effect_sizes)),
+        "effect_sizes": effect_sizes,
+        "macro_lengths": macro_lengths,
+    }
+    df = pd.DataFrame(data=d)
+    filename = f"output/data/{learned_macros_type}/{cube_index}.pkl"
+    df.to_pickle(filename)
 
-    plt.savefig(f"output/plots/{"_".join(title.lower().split())}_cube{cube_index}.png")
 
-
-def generate_plan(simulator: CubeEnv, learned_macros, cube_index, N_m=576, B_m=1_000_000, disable_progress=False):
+def generate_plan(simulator: CubeEnv, init_seq, learned_macros, learned_macros_type, cube_index, N_m=576, B_m=1_000_000, disable_progress=False):
     simulator.render()
     curr_seq = simulator.sequence
     max_gcount = 48 # maximum goal count heuristic is 48 as the simulator uses a 48-state-variable representation
@@ -46,8 +51,9 @@ def generate_plan(simulator: CubeEnv, learned_macros, cube_index, N_m=576, B_m=1
                     simulator.render()
                     print("Cube solved!")
 
-                    plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
-                    plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
+                    # plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
+                    # plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
+                    save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths)
 
                     return [*curr_seq, a][len(init_seq):]
 
@@ -75,8 +81,9 @@ def generate_plan(simulator: CubeEnv, learned_macros, cube_index, N_m=576, B_m=1
                     simulator.render()
                     print("Cube solved!")
 
-                    plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
-                    plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
+                    # plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
+                    # plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
+                    save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths)
 
                     return [*curr_seq, *primitives][len(init_seq):]
 
@@ -99,32 +106,50 @@ def generate_plan(simulator: CubeEnv, learned_macros, cube_index, N_m=576, B_m=1
     simulator.render()
     print(f"Unable to solve cube in {B_m} iterations")
 
-    plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
-    plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
+    # plot_results(range(0, len(effect_sizes)), effect_sizes, cube_index, title="Effect Size")
+    # plot_results(range(0, len(macro_lengths)), macro_lengths, cube_index, title="Macro Length")
+    save_results(cube_index, learned_macros_type, effect_sizes, macro_lengths)
 
     return curr_seq[len(init_seq):]
 
 
-if __name__ == "__main__":
-    with open("output/learned_macros.pkl", "rb") as f:
-        learned_macros = [macro.split(" ") for macro in pickle.load(f)]
-        print(f"{len(learned_macros)} macros found")
-
-    print("Finding plan to solve cube with learned focused macros...")
-
-    index = input("Enter start sequence index [0-99] (if left empty, default=0): ")
-    index = str(index if index else '0').zfill(3)
+def main(simulator: CubeEnv, learned_macros, learned_macros_type, i):
+    index = i.zfill(3)
     init_actions = get_init_actions(index)
 
-    simulator = CubeEnv()
     init_seq = [simulator.action_lookup[a] for a in init_actions]
     simulator.reset(sequence=init_seq)
 
-    seq = generate_plan(simulator, learned_macros, index)
+    seq = generate_plan(simulator, init_seq, learned_macros, learned_macros_type, index)
     plan = " ".join([simulator.action_meanings[s] for s in seq])
 
-    with open(f"output/cube_solution_start{index}.pkl", "wb") as f:
+    with open(f"output/plans/{learned_macros_type}/{index}.pkl", "wb") as f:
         pickle.dump(plan, f)
 
-    print(f"Saved plan in output/cube_solution_start{index}.pkl (saved sequence excludes start sequence)")
+    print(f"Saved plan in output/plans/{learned_macros_type}/{index}.pkl (saved sequence excludes start sequence)")
     print(plan)
+
+
+if __name__ == "__main__":
+    print("Select your learned macros...")
+    print("Select `n10` for macros learned using the limited fringe of maximum size N_m * 10")
+    print("Select `inf` for macros learned using the unlimited fringe")
+
+    learned_macros_type = input("Enter `n10` or `inf`: ")
+    if learned_macros_type not in ["n10", "inf"]:
+        exit("Invalid option entered. Rerun the program and enter either `n10` or `inf`.")
+
+    with open(f"output/{learned_macros_type}_learned_macros.pkl", "rb") as f:
+        learned_macros = [macro.split(" ") for macro in pickle.load(f)]
+        print(f"{len(learned_macros)} macros found")
+
+    simulator = CubeEnv()
+
+    print("Finding plan to solve cube with learned focused macros...")
+    index = input("Enter start sequence index [0-99] (if left empty, default=all): ")
+    
+    if index:
+        plan = main(simulator, learned_macros, learned_macros_type, index)
+    else:
+        for i in range(100):
+            plan = main(simulator, learned_macros, learned_macros_type, str(i))
