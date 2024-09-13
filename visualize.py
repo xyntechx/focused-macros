@@ -1,15 +1,6 @@
-# import numpy as np
 import pandas as pd
-
-# import matplotlib as mpl
-# import matplotlib.pyplot as plt
-
 import seaborn as sns
-# import matplotlib.pyplot as plt
-# import seaborn.objects as so
 
-# TODO: seaborn manipulate pandas df
-# ? https://seaborn.pydata.org/generated/seaborn.objects.Plot.html
 
 def read_data(learned_macros_type, i):
     index = i.zfill(3)
