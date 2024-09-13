@@ -1,5 +1,5 @@
 # Focused Macros
-Learn focused macros (action abstractions) for planning
+Learn focused macros (action abstractions) for efficient black-box planning
 
 ## Init Setup
 
