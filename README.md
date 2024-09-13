@@ -1,15 +1,15 @@
 # Focused Macros
-Learn focused macros (action abstractions) for planning
+Learn focused macros (action abstractions) for efficient black-box planning
 
 ## Init Setup
 
 ```
 git clone --recursive git@github.com:xyntechx/focused-macros.git
 cd focused-macros
-python3.12 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip wheel
-python3 -m pip install -r requirements.txt
+pip install --upgrade pip wheel
+pip install -r requirements.txt
 ```
 
 ## Running
